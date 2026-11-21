@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0e1723">
+  <meta name="description" content="Рецепты, производственные цепочки и план ресурсов No Man’s Sky.">
+  <title>No Man’s Sky · Атлас выживания</title>
+  <link rel="stylesheet" href="./atlas.css">
+  <script defer src="./data.js"></script>
+  <script defer src="./atlas.js"></script>
+</head>
+<body>
+  <header class="masthead">
+    <a class="brand" href="#stasis-device">NMS <i>/</i> ATLAS<span>Производственные цепочки</span></a>
+    <div class="mast-actions"><span class="mode">Выживание</span><button id="about-button" type="button">О данных</button></div>
+  </header>
+  <div class="shell">
+    <aside class="sidebar" aria-labelledby="find-title">
+      <h1 id="find-title">Найти предмет</h1>
+      <label class="sr-only" for="search">Название на русском или английском</label>
+      <input id="search" type="search" placeholder="Название на русском или английском" autocomplete="off" enterkeyhint="search">
+      <label class="sr-only" for="category">Раздел</label>
+      <select id="category"></select>
+      <label class="check"><input id="favorites-only" type="checkbox"> Только избранное</label>
+      <p id="match-count" class="muted" aria-live="polite">Загрузка каталога…</p>
+      <ul id="matches" class="matches"></ul>
+      <button id="more" type="button" hidden>Показать ещё</button>
+    </aside>
+    <main id="main" tabindex="-1">
+      <div id="item" class="item-heading"></div>
+      <section id="item-facts" class="facts" aria-label="Описание предмета"></section>
+      <nav id="views" aria-label="Карточка предмета">
+        <button type="button" data-view="recipes">Рецепты</button>
+        <button type="button" data-view="tree">Цепочка</button>
+        <button type="button" data-view="plan">План ресурсов</button>
+        <button type="button" data-view="uses">Где используется</button>
+      </nav>
+      <section id="panel" aria-label="Сведения о предмете">
+        <p id="loading" class="muted">Открываю атлас…</p>
+        <noscript>Включите JavaScript, чтобы пользоваться поиском и калькулятором.</noscript>
+      </section>
+    </main>
+  </div>
+  <dialog id="about">
+    <form method="dialog"><button type="submit" class="close">Закрыть</button></form>
+    <h2>О данных атласа</h2>
+    <p>Атлас сверяет названия, игровые ID, иконки и количества по выгрузке NMSE для Forsaken. Для очистителя и переработчика нутриентов показаны все строки таблицы операций. Каталог включает служебные записи игры, поэтому присутствие предмета в атласе не подтверждает, что он доступен в обычном сохранении.</p>
+    <ul id="counts"></ul>
+    <p><strong>Выживание.</strong> Расчёт использует стандартные затраты на изготовление и ограниченные стопки: до 500 единиц для обычного сырья в экзокостюме и до 250 на входной слот очистителя. Пользовательские настройки могут отличаться. Расход топлива и стоимость изучения чертежей учитываются в игре отдельно.</p>
+    <p>В карточках приведены краткие справки на основе игровых таблиц. Пункт «Описание в игре» показывает, под каким именем открыть исходное описание в игровом каталоге. Иконки загружаются из той же выгрузки по игровому ID. Игровая графика принадлежит Hello Games.</p>
+    <p><a href="./audit.json">Сводка проверки</a> · <a href="https://github.com/vectorcmdr/NMSE/tree/078cb7c99f47f9d799da8f82c70a3c6af5b13a40/Resources/json" target="_blank" rel="noreferrer">Выгрузка NMSE</a> · <a href="https://www.nomanssky.com/waypoint-update/" target="_blank" rel="noreferrer">Настройки сложности</a></p>
+  </dialog>
+</body>
+</html>

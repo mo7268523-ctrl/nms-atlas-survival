@@ -1,0 +1,20 @@
+{
+  "extraction": "078cb7c99f47f9d799da8f82c70a3c6af5b13a40",
+  "items": 5360,
+  "iconPaths": 5360,
+  "missingIcons": 0,
+  "counts": {
+    "build": 1562,
+    "repair": 97,
+    "craft": 142,
+    "refiner": 361,
+    "install": 197,
+    "cook": 1323
+  },
+  "skippedRequirements": [],
+  "matchedLegacy": 3373,
+  "legacyRows": 3719,
+  "mergedLegacyAliases": 121,
+  "nameTranslations": 5030,
+  "descriptionPointers": 5301
+}
