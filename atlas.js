@@ -23,7 +23,7 @@
   const items = new Map(Object.entries(data.items).map(([slug, row]) => [slug, {
     slug, english: row[0], name: row[1] || row[0], category: row[2],
     icon: row[3], recipes: row[4], id: row[5], group: row[6], sourceFile: row[7],
-    isResource: row[8], previousSlug: row[9], descriptionKey: row[10], usedBy: []
+    isResource: row[8], previousSlug: row[9], descriptionKey: row[10], regularStack: row[11], sourceLine: row[12], usedBy: []
   }]));
   function normalize(str) {
     return str.toLocaleLowerCase().replaceAll('ё', 'е').replace(/[‐‑–—-]/g, ' ').trim();
@@ -90,8 +90,9 @@
     const terms = normalize(byId('search').value).split(/\s+/).filter(Boolean);
     const category = byId('category').value;
     const favOnly = byId('favorites-only').checked;
+    const showInternal = byId('internal-items').checked;
     return sorted.filter(item => (!category || item.category === category) &&
-      (!favOnly || favorites.has(item.slug)) && terms.every(term => item.search.includes(term)));
+      (!favOnly || favorites.has(item.slug)) && (showInternal || !item.name.startsWith('[?]')) && terms.every(term => item.search.includes(term)));
   }
 
   function renderMatches() {
@@ -167,7 +168,7 @@
     const isRequirement = recipe[1] === 'install' || recipe[1] === 'repair';
     cardTitle(card, kinds[recipe[1]] + (isRequirement ? ' · материалы' : ' · выход ×' + format.format(recipe[2])));
     if (recipe[4]) card.append(node('p', recipe[4], 'meta'));
-    if (recipe[1] === 'refiner' && recipe[3].every(([slug]) => items.get(slug).isResource)) {
+    if (recipe[1] === 'refiner' && recipe[3].every(([slug]) => items.get(slug).regularStack)) {
       const maxInput = Math.min(...recipe[3].map(([, amount]) => Math.floor(250 / amount)));
       if (maxInput) card.append(node('p', 'По ёмкости входных слотов: до ' + format.format(maxInput) + ' операций за загрузку.', 'meta'));
     }
@@ -291,7 +292,7 @@
         const notes = [...row.reasons].join(', ');
         if (notes) first.append(node('small', ' ' + notes, 'muted'));
         line.insertCell().textContent = format.format(row.amount);
-        line.insertCell().textContent = row.item.isResource ? format.format(Math.ceil(row.amount / 500)) : '—';
+        line.insertCell().textContent = row.item.regularStack ? format.format(Math.ceil(row.amount / 500)) : '—';
       }
       result.replaceChildren(materialRows.length ? table : node('p', 'Расходуемых материалов нет.', 'muted'));
       const remains = plan.surplus.get(item.slug);
@@ -339,7 +340,7 @@
     const top = node('p', summary.join(' '));
     const links = node('p', 'Игровой ID: ' + item.id + ' · ', 'meta');
     const record = node('a', 'Запись в выгрузке');
-    record.href = source + encodeURIComponent(item.sourceFile);
+    record.href = source + encodeURIComponent(item.sourceFile) + (item.sourceLine ? '#L' + item.sourceLine : '');
     record.rel = 'noreferrer';
     record.target = '_blank';
     links.append(record);
@@ -353,7 +354,10 @@
       original.target = '_blank';
       detail.append(original);
     }
-    if (item.descriptionKey) detail.append(node('p', 'Ключ локализации: ' + item.descriptionKey, 'meta'));
+    if (item.descriptionKey) {
+      const key = node('p', 'Ключ русской локализации: ' + item.descriptionKey, 'meta');
+      detail.append(key);
+    }
     info.replaceChildren(top, links, detail);
   }
 
@@ -407,7 +411,7 @@
   for (const [kind, count] of Object.entries(data.counts)) {
     byId('counts').append(node('li', kinds[kind] + ' · ' + format.format(count)));
   }
-  for (const id of ['search', 'category', 'favorites-only']) {
+  for (const id of ['search', 'category', 'favorites-only', 'internal-items']) {
     byId(id).addEventListener(id === 'search' ? 'input' : 'change', () => {
       state.limit = 50;
       renderMatches();

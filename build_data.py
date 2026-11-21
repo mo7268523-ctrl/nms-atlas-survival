@@ -33,12 +33,22 @@ def plain(text):
 def folded(text):
     return plain(text).casefold().replace('ё', 'е')
 for filename, section in sections.items():
-    for row in read(filename + '.json'):
+    file = filename + '.json'
+    line_by_id = {}
+    current = None
+    for number, line in enumerate((a.nmse_json / file).read_text().splitlines(), 1):
+        if m := re.fullmatch(r'\t\t"Id": (".*"),?', line):
+            current = json.loads(m[1])
+            line_by_id[current] = number
+        elif current and line.startswith('\t\t"Description":'):
+            line_by_id[current] = number
+    for row in read(file):
         if not row.get('Id') or not row.get('Name'):
             continue
         id = row['Id']
         assert id not in master, id
-        master[id] = (row, filename + '.json', section)
+        master[id] = (row, file, section)
+        row['_source_line'] = line_by_id.get(id)
         index[folded(row['Name'])].add(id)
 
 def matching_id(slug, old):
@@ -110,7 +120,8 @@ for id, (row, filename, section) in master.items():
         plain(row['Name']), localized(row, 'NameLower_LocStr') or localized(row, 'Name_LocStr'),
         section, icon if icon in icon_files else '', [], id,
         localized(row, 'Subtitle_LocStr') or plain(row.get('Group')), filename,
-        row.get('SourceTable') == 'Substance', old_slug, row.get('Description_LocStr') or ''
+        row.get('SourceTable') == 'Substance', old_slug, row.get('Description_LocStr') or '',
+        section == 'RawMaterials' and row.get('MaxStackSize') == 1, row['_source_line']
     ]
 
 def add_recipe(rid, kind, id, result, ingredients, operation=''):
@@ -155,7 +166,8 @@ source_audit = dict(
     skippedRequirements=unknown_requirements, matchedLegacy=len(legacy_to_id),
     legacyRows=len(legacy), mergedLegacyAliases=len(legacy_to_id)-len(old_by_id),
     nameTranslations=sum(bool(r[1]) for r in records.values()),
-    descriptionPointers=sum(bool(r[10]) for r in records.values()))
+    descriptionPointers=sum(bool(r[10]) for r in records.values()),
+    exactRecordLines=sum(bool(r[12]) for r in records.values()))
 result = {
     'version':'Forsaken · выгрузка NMSE', 'revision':a.revision,
     'aliases':{slug:slugs[id] for slug,id in legacy_to_id.items() if slug != slugs[id] and slug not in taken},
