@@ -94,9 +94,16 @@ dialog::backdrop { background: #080d17cc; }
 .mast-actions { display:flex; align-items:center; justify-content:flex-end; gap:.75rem; }
 .mode { border:1px solid var(--line); border-radius:999px; color:var(--accent); padding:.3rem .7rem; font-size:.9rem; }
 .facts { margin:.15rem 0 1.05rem; padding: .8rem 1rem; border:1px solid var(--line); border-radius:.75rem; }
-.facts p { margin:.3rem 0 .65rem; }
-.facts summary { color:var(--accent); cursor:pointer; }
-.facts details p { margin-top:.65rem; }
+.fact-intro { margin:.15rem 0 .65rem; }
+.fact-list { display:grid; grid-template-columns:minmax(0, 9.2rem) minmax(0, 1fr); gap:.45rem .9rem; margin:0; }
+.fact-list dt { color:var(--muted); }
+.fact-list dd { margin:0; overflow-wrap:anywhere; }
+.fact-list .price { color:var(--accent); }
+@media (max-width: 600px) {
+  .fact-list { display:block; }
+  .fact-list dt { margin-top:.65rem; }
+  .fact-list dd { margin-top:.15rem; }
+}
 .sprite img { display:block; width:100%; height:100%; object-fit:contain; }
 .materials td:not(:first-child), .materials th:not(:first-child) { text-align:right; padding-left:.5rem; }
 @media (max-width: 460px) {

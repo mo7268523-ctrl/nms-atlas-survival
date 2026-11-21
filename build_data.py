@@ -116,12 +116,24 @@ recipes_seen = set()
 for id, (row, filename, section) in master.items():
     icon = row.get('Icon') or ''
     old_slug = min(old_by_id[id], key=lambda slug: (len(slug), slug)) if id in old_by_id else ''
+    # Placed objects carry nominal values unrelated to acquiring the part or its blueprint.
+    valuation = row.get('BaseValueUnits')
+    can_display = (row.get('CurrencyType') == 'Credits' and isinstance(valuation, (int, float))
+                   and valuation > 0 and row.get('Rarity') != 'Impossible'
+                   and row.get('Group') not in {'Ingredient Category', 'Reward Item'}
+                   and not plain(row.get('Name')).startswith('[?]')
+                   and row.get('SourceTable') in {'Product', 'Substance'}
+                   and section not in {'Buildings', 'ConstructedTechnology'})
+    stat = [row.get('Quality'), row.get('FishSize'), row.get('FishingTime'),
+            row.get('Biomes'), row.get('NeedsStorm')] if filename == 'Fish.json' else None
     records[slugs[id]] = [
         plain(row['Name']), localized(row, 'NameLower_LocStr') or localized(row, 'Name_LocStr'),
         section, icon if icon in icon_files else '', [], id,
         localized(row, 'Subtitle_LocStr') or plain(row.get('Group')), filename,
         row.get('SourceTable') == 'Substance', old_slug, row.get('Description_LocStr') or '',
-        section == 'RawMaterials' and row.get('MaxStackSize') == 1, row['_source_line']
+        section == 'RawMaterials' and row.get('MaxStackSize') == 1, row['_source_line'],
+        valuation if can_display else None, plain(row.get('Group')),
+        row.get('Consumable') is True, row.get('GoodForSelling') is True, stat
     ]
 
 def add_recipe(rid, kind, id, result, ingredients, operation=''):
@@ -167,7 +179,8 @@ source_audit = dict(
     legacyRows=len(legacy), mergedLegacyAliases=len(legacy_to_id)-len(old_by_id),
     nameTranslations=sum(bool(r[1]) for r in records.values()),
     descriptionPointers=sum(bool(r[10]) for r in records.values()),
-    exactRecordLines=sum(bool(r[12]) for r in records.values()))
+    exactRecordLines=sum(bool(r[12]) for r in records.values()),
+    cardsWithBaseValue=sum(r[13] is not None for r in records.values()))
 result = {
     'version':'Forsaken · выгрузка NMSE', 'revision':a.revision,
     'aliases':{slug:slugs[id] for slug,id in legacy_to_id.items() if slug != slugs[id] and slug not in taken},

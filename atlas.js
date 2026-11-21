@@ -18,12 +18,11 @@
   };
   const format = new Intl.NumberFormat('ru-RU');
   const collator = new Intl.Collator('ru', {numeric: true});
-  const source = "https://github.com/vectorcmdr/NMSE/blob/" + data.revision + "/Resources/json/";
   const iconSource = "https://raw.githubusercontent.com/vectorcmdr/NMSE/" + data.revision + "/Resources/images/";
   const items = new Map(Object.entries(data.items).map(([slug, row]) => [slug, {
     slug, english: row[0], name: row[1] || row[0], category: row[2],
-    icon: row[3], recipes: row[4], id: row[5], group: row[6], sourceFile: row[7],
-    isResource: row[8], previousSlug: row[9], descriptionKey: row[10], regularStack: row[11], sourceLine: row[12], usedBy: []
+    icon: row[3], recipes: row[4], id: row[5], group: row[6], regularStack: row[11],
+    baseValue: row[13], type: row[14], edible: row[15], trade: row[16], fish: row[17], usedBy: []
   }]));
   function normalize(str) {
     return str.toLocaleLowerCase().replaceAll('ё', 'е').replace(/[‐‑–—-]/g, ' ').trim();
@@ -305,60 +304,136 @@
     update();
   }
 
-  const shortNotes = {
-    FUEL1: 'Заряжает расщепитель мультитула. Углерод получают из растений и используют в крафте и переработке.',
-    FUEL2: 'Концентрированное топливо для технологий, которые принимают углерод. Его можно получить в очистителе.',
-    OXYGEN: 'Пополняет жизнеобеспечение экзокостюма. В очистителе кислород служит ингредиентом и участвует в рецептах получения других ресурсов.',
-    CATALYST1: 'Пополняет базовую защиту от вредных факторов. Натрий также используют в строительстве и переработке.',
-    CATALYST2: 'Концентрированная форма натрия. Пополняет базовую защиту экзокостюма от вредных факторов.',
-    LAND1: 'Базовый ресурс для строительства и изготовления металлической обшивки. Добывается расщепителем из подходящих камней.',
-    FOOD_M_REX: 'Сырой ингредиент животного происхождения. Его готовят в переработчике нутриентов, например для копчёного мяса и рагу.',
-    FOOD_MEAT_STEW: 'Готовое мясное блюдо. Среди вариантов есть рецепт из двух порций чешуйчатого мяса.',
-    UT_SURVEY: 'Открывает в анализирующем визоре поиск электромагнитных полей, глубинных залежей и скоплений газа.',
-    COOKER: 'Переносное устройство для приготовления еды из одного, двух или трёх ингредиентов.',
-    ANY_BONE: 'В этой строке указана группа взаимозаменяемых ингредиентов. Для операции подходит съедобная кость.',
-    SWARMDUST: 'Материал, который остаётся после уничтожения роевиков. В очистителе пять единиц перерабатываются в одно скопление нанитов.'
+  const notes = window.NMS_ITEM_NOTES || {};
+  const blueprintPrices = {
+    COOKER: '10 модулей восстановленных данных',
+    UT_SURVEY: '320 нанитов',
+    UT_SCAN: '120 нанитов'
   };
+  const recipeNames = {
+    craft: 'Изготовление в инвентаре',
+    refiner: 'Переработка в очистителе',
+    cook: 'Приготовление в переработчике нутриентов',
+    build: 'Материалы для постройки',
+    install: 'Материалы для установки',
+    repair: 'Материалы для ремонта'
+  };
+  const useNames = {
+    craft: 'Изготовление', cook: 'Кулинария', refiner: 'Очиститель',
+    install: 'Установка', repair: 'Ремонт', build: 'Строительство'
+  };
+  const corvetteParts = {
+    'Corvette External Plating': 'Наружная обшивка для оформления корпуса корвета.',
+    'Corvette Main Engine': 'Основной двигатель для сборки корвета.',
+    'Corvette Flight Stabliser': 'Стабилизатор для сборки корвета.',
+    'Corvette Structural Support': 'Несущий элемент для соединения деталей корвета.',
+    'Corvette Hull Attachment': 'Внешняя навесная деталь корвета.',
+    'Corvette Interior Furnishing': 'Предмет обстановки для помещений корвета.',
+    'Corvette Access Module': 'Модуль входа в корвет.',
+    'Corvette Cockpit': 'Кабина управления корветом.',
+    'Corvette Rear Thruster': 'Кормовой двигатель для сборки корвета.',
+    'Corvette Weapon System': 'Вооружение, устанавливаемое при сборке корвета.',
+    'Corvette Reactor Module': 'Реакторный модуль для сборки корвета.',
+    'Corvette Landing Gear': 'Посадочная опора корвета.'
+  };
+  const fishBiomes = {
+    Toxic: 'токсичные', Swamp: 'болотистые', Radioactive: 'радиоактивные',
+    Scorched: 'жаркие', Lava: 'вулканические', Frozen: 'ледяные', Lush: 'цветущие',
+    Barren: 'засушливые', Weird: 'экзотические', Red: 'миры красных систем',
+    Green: 'миры зелёных систем', Blue: 'миры синих систем',
+    Waterworld: 'водные миры', GasGiant: 'газовые гиганты'
+  };
+
+  function fishLocation(fish) {
+    const [, , time, biomes, storm] = fish;
+    const zones = (biomes || []).map(biome => fishBiomes[biome]).filter(Boolean);
+    const location = zones.length ? 'Водоёмы подходящих миров (' + zones.join(', ') + ')' : 'Рыбалка в водоёмах';
+    const limits = [time === 'Night' ? 'ночью' : time === 'Day' ? 'днём' : '', storm ? 'во время бури' : ''].filter(Boolean);
+    return location + (limits.length ? ', ' + limits.join(', ') : '') + '.';
+  }
+
+  function itemIntro(item) {
+    if (item.type === 'Ingredient Category') return 'Группа взаимозаменяемых ингредиентов. В рецепте можно использовать подходящий предмет этой группы.';
+    if (item.fish) {
+      const [quality, size] = item.fish;
+      const grades = {Common:'обычный', Rare:'редкий', Epic:'эпический', Legendary:'легендарный', Junk:'мусор'};
+      const sizes = {Small:'мелкий', Medium:'средний', Large:'крупный', ExtraLarge:'очень крупный'};
+      const labels = [grades[quality], sizes[size]].filter(Boolean);
+      return labels.length ? 'Улов на рыбалке (' + labels.join(', ') + ').' : 'Улов на рыбалке.';
+    }
+    if (corvetteParts[item.type]) return corvetteParts[item.type];
+    if (item.trade) return 'Предмет можно продать за юниты.';
+    if (item.category === 'Cooking') {
+      if (item.type === 'Raw Ingredient') return 'Сырой продукт для переработчика нутриентов.';
+      if (item.edible) return 'Съедобный продукт. Его можно употребить через инвентарь.';
+    }
+    const label = item.group && item.group !== item.type ? item.group : categories[item.category];
+    return 'Категория предмета: ' + (label || 'Прочее') + '.';
+  }
+
+  function addFact(list, title, content) {
+    const term = node('dt', title);
+    const detail = node('dd');
+    detail.append(content);
+    list.append(term, detail);
+  }
+
+  function factLink(item) {
+    const a = node('a', item.name);
+    a.href = '#' + encodeURIComponent(item.slug);
+    a.dataset.item = item.slug;
+    return a;
+  }
+
+  function recipePreview(recipe) {
+    const [, kind, result, ingredients] = recipe;
+    const detail = node('span');
+    detail.append(recipeNames[kind], ' · ');
+    ingredients.forEach(([slug, amount], index) => {
+      if (index) detail.append(' + ');
+      detail.append(format.format(amount), ' × ', factLink(items.get(slug)));
+    });
+    if (kind === 'refiner' || kind === 'cook') detail.append(' → ', format.format(result), ' шт.');
+    return detail;
+  }
+
+  function usePreview(item) {
+    const detail = node('span');
+    const used = new Set();
+    const picks = Object.keys(useNames).flatMap(kind => {
+      const pick = item.usedBy.find(entry => entry.recipe[1] === kind && entry.item !== item && !used.has(entry.item.slug));
+      if (!pick) return [];
+      used.add(pick.item.slug);
+      return [pick];
+    }).slice(0, 3);
+    picks.forEach(({item: product, recipe}, index) => {
+      if (index) detail.append(' · ');
+      detail.append(useNames[recipe[1]], ' — ', factLink(product));
+    });
+    return picks.length ? detail : null;
+  }
 
   function describe(item) {
     const info = byId('item-facts');
-    const summary = [];
-    if (shortNotes[item.id]) summary.push(shortNotes[item.id]);
-    else {
-      const group = item.group || categories[item.category] || item.category;
-      summary.push('Тип в каталоге: ' + group + '.');
-      if (item.recipes.length) {
-        const modes = [...new Set(item.recipes.map(r => kinds[r[1]].toLowerCase()))];
-        summary.push('Доступные операции в таблицах: ' + modes.join(', ') + '.');
-      }
-      if (item.usedBy.length) {
-        const examples = [...new Set(item.usedBy.filter(r => r.item !== item).map(r => r.item.name))].slice(0, 3);
-        if (examples.length) summary.push('Примеры применения: ' + examples.join(', ') + '.');
-      }
-      if (!item.recipes.length && !item.usedBy.length) summary.push('В выгрузке нет производственных операций с этим предметом.');
+    const [intro, acquisition, use] = notes[item.id] || [];
+    const facts = node('dl', null, 'fact-list');
+    if (item.baseValue > 0) {
+      addFact(facts, 'Базовая стоимость', node('strong', format.format(item.baseValue) + ' юнитов за шт.', 'price'));
+    } else if (!blueprintPrices[item.id]) {
+      addFact(facts, 'Базовая стоимость', node('span', 'Нет данных о цене в юнитах.', 'muted'));
     }
-    const top = node('p', summary.join(' '));
-    const links = node('p', 'Игровой ID: ' + item.id + ' · ', 'meta');
-    const record = node('a', 'Запись в выгрузке');
-    record.href = source + encodeURIComponent(item.sourceFile) + (item.sourceLine ? '#L' + item.sourceLine : '');
-    record.rel = 'noreferrer';
-    record.target = '_blank';
-    links.append(record);
-    const detail = node('details');
-    detail.append(node('summary', 'Описание в игре'));
-    detail.append(node('p', 'В игровом меню откройте «Каталог и руководство» и найдите «' + item.name + '». Если запись ещё закрыта, предмет сначала нужно обнаружить.'));
-    if (item.previousSlug) {
-      const original = node('a', 'Открыть карточку с английским текстом');
-      original.href = 'https://nmscraft.com/item/' + encodeURIComponent(item.previousSlug) + '/';
-      original.rel = 'noreferrer';
-      original.target = '_blank';
-      detail.append(original);
+    if (blueprintPrices[item.id]) addFact(facts, 'Цена чертежа', blueprintPrices[item.id]);
+    const recipes = item.recipes.filter(recipe => recipe[3].every(([slug]) => slug !== item.slug));
+    const recipe = recipes.find(row => row[1] === 'craft') || recipes[0];
+    if (acquisition) addFact(facts, 'Как получить', acquisition);
+    else if (item.fish) addFact(facts, 'Где поймать', fishLocation(item.fish));
+    else if (recipe) {
+      const label = {build: 'Как построить', install: 'Как установить', repair: 'Как отремонтировать'}[recipe[1]];
+      addFact(facts, label || 'Как получить', recipePreview(recipe));
     }
-    if (item.descriptionKey) {
-      const key = node('p', 'Ключ русской локализации: ' + item.descriptionKey, 'meta');
-      detail.append(key);
-    }
-    info.replaceChildren(top, links, detail);
+    const uses = use || usePreview(item);
+    if (uses) addFact(facts, 'Для чего нужен', uses);
+    info.replaceChildren(node('p', intro || itemIntro(item), 'fact-intro'), facts);
   }
 
   function render() {
